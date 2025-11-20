@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventory System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<style>
+body { font-family: Arial; margin:20px; background:#f7f7f7; }
+.device-card { background:#fff; padding:15px; margin:10px 0; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1);}
+button { padding:8px 14px; background:#007bff; color:white; border:none; border-radius:6px; cursor:pointer; margin:5px;}
+.status { font-weight:bold; }
+</style>
+</head>
+<body>
+
+<h1>Inventory System</h1>
+
+<label><b>Filter by Category:</b></label>
+<select id="categoryFilter" onchange="filterByCategory()" style="padding:8px;border-radius:6px;">
+<option value="all">All</option>
+<option value="Civil">Civil</option>
+<option value="Mechanical">Mechanical</option>
+<option value="Electrical">Electrical</option>
+<option value="Geotechnical">Geotechnical</option>
+</select>
+
+<button onclick="showDashboard()" style="background:#28a745;">Dashboard</button>
+
+<div id="device-page" style="display:none;background:#fff;padding:20px;border-radius:10px;"></div>
+<div id="device-list"></div>
+
+<script>
+// device list simplified with categories
+const devices = [
+{id:21,name:"Rebound hammer",category:"Civil",status:"In Store",holder:""},
+{id:22,name:"Schmidt hammer",category:"Civil",status:"In Store",holder:""},
+{id:29,name:"Subsurface Mapping GPR",category:"Geotechnical",status:"Out of Service",holder:""},
+{id:60,name:"Clamp Ground Tester",category:"Electrical",status:"In Store",holder:""},
+{id:7,name:"Moisture Meter",category:"Mechanical",status:"In Store",holder:""}
+];
+
+let history=[];
+
+function logAction(id,action,person=""){
+ history.push({id,action,person,time:new Date().toLocaleString()});
+}
+
+function render(){
+ const list=document.getElementById("device-list");
+ list.innerHTML="";
+ devices.forEach(dev=>{
+   const card=document.createElement("div");
+   card.className="device-card";
+   card.innerHTML=`
+      <h3>${dev.name} (ID: ${dev.id})</h3>
+      <p><b>Category:</b> ${dev.category}</p>
+      <p class='status'>Status: ${dev.status}</p>
+      <p>Holder: ${dev.holder||"-"}</p>
+      <canvas id="qr-${dev.id}"></canvas><br>
+      <button onclick="checkout(${dev.id})">Check Out</button>
+      <button onclick="checkin(${dev.id})">Check In</button>
+   `;
+   list.appendChild(card);
+   new QRious({element:document.getElementById(`qr-${dev.id}`),value:`?id=${dev.id}`,size:120});
+ });
+}
+
+function checkout(id){
+ const person=prompt("Who takes this?");
+ if(!person)return;
+ let dev=devices.find(d=>d.id===id);
+ dev.status="Checked Out"; dev.holder=person;
+ logAction(id,"Checked Out",person);
+ render();
+}
+
+function checkin(id){
+ let dev=devices.find(d=>d.id===id);
+ dev.status="In Store"; dev.holder="";
+ logAction(id,"Checked In","");
+ render();
+}
+
+function filterByCategory(){
+ const cat=document.getElementById("categoryFilter").value;
+ const list=document.getElementById("device-list");
+ list.innerHTML="";
+ devices.filter(d=>cat==="all"||d.category===cat).forEach(dev=>{
+   const card=document.createElement("div");
+   card.className="device-card";
+   card.innerHTML=`
+      <h3>${dev.name} (ID: ${dev.id})</h3>
+      <p><b>Category:</b> ${dev.category}</p>
+      <p class='status'>Status: ${dev.status}</p>
+      <p>Holder: ${dev.holder||"-"}</p>
+      <canvas id="qr-${dev.id}"></canvas><br>
+      <button onclick="checkout(${dev.id})">Check Out</button>
+      <button onclick="checkin(${dev.id})">Check In</button>
+   `;
+   list.appendChild(card);
+   new QRious({element:document.getElementById(`qr-${dev.id}`),value:`?id=${dev.id}`,size:120});
+ });
+}
+
+function showDashboard(){
+ const total=devices.length;
+ const instore=devices.filter(d=>d.status==="In Store").length;
+ const outservice=devices.filter(d=>d.status==="Out of Service").length;
+ const checkedout=devices.filter(d=>d.status==="Checked Out").length;
+
+ document.body.innerHTML=`
+ <h1 style='text-align:center;'>Dashboard</h1>
+ <div style='display:flex;gap:20px;flex-wrap:wrap;justify-content:center;'>
+   <div style='background:#fff;padding:20px;width:200px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);text-align:center;'>
+     <h2>${total}</h2><p>Total Devices</p>
+   </div>
+   <div style='background:#e8fff1;padding:20px;width:200px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);text-align:center;'>
+     <h2>${instore}</h2><p>In Store</p>
+   </div>
+   <div style='background:#fff7e6;padding:20px;width:200px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);text-align:center;'>
+     <h2>${checkedout}</h2><p>Checked Out</p>
+   </div>
+   <div style='background:#ffecec;padding:20px;width:200px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);text-align:center;'>
+     <h2>${outservice}</h2><p>Out of Service</p>
+   </div>
+ </div>
+ <div style='text-align:center;margin-top:25px;'>
+   <button onclick='location.reload()'>Back</button>
+ </div>
+ `;
+}
+
+render();
+</script>
+</body>
+</html>
